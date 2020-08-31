@@ -23,7 +23,11 @@
                     primaryColor: "#1977CC",
                     borderColor: "#1977CC",
                     backgroundColor: "#FFF",
-                    textColor: '#555'
+                    textColor: '#555',
+					assignment: true,
+					value:'',
+					onChange:function(){},
+					on:'click',
 
                 }, options);
 
@@ -147,7 +151,24 @@
                         _td_h = _td_c.find('.td-time span:first').attr('data-id'),
                         _td_m = _td_c.find('.td-time span:last').attr('data-id');
 
-                    if (Math.round(_td_h) >= 12 && Math.round(_td_h) < 24) {
+                    var
+                        str = _td_toshowvalue(_td_h, _td_m)
+					if(_td_options.value != str){
+						if(_td_options.onChange.call(false,str) !== false){
+							if(_td_options.assignment){
+								_td_input.val(str);
+							}
+							_td_options.value = str;
+							
+						}
+					}
+                    
+					
+
+
+                };
+				_td_toshowvalue = function(_td_h, _td_m){
+					if (Math.round(_td_h) >= 12 && Math.round(_td_h) < 24) {
                         var
                             h = Math.round(_td_h) - 12,
                             a = 'pm',
@@ -161,9 +182,7 @@
 
                     if (h == 0) h = 12;
 
-                    var
-                        str =
-                        _td_options.format
+                    return _td_options.format
                         .replace(/\b(H)\b/g, Math.round(_td_h))
                         .replace(/\b(h)\b/g, Math.round(h))
                         .replace(/\b(m)\b/g, Math.round(_td_m))
@@ -172,12 +191,7 @@
                         .replace(/\b(mm)\b/g, _td_num(Math.round(_td_m)))
                         .replace(/\b(a)\b/g, a)
                         .replace(/\b(A)\b/g, A);
-
-                    _td_input.val(str);
-
-
-                };
-
+				}
 
             if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                 _td_mobile = true;
@@ -302,7 +316,33 @@
                 }
 
             });
+			var _td_parseTime = function(value){
+				if (value.length && value.indexOf(":") != -1) {
 
+                    var reg = /\d+/g,
+                        am;
+                    var st = value.split(':');
+
+					h = parseInt(st[0].match(reg));
+					m = parseInt(st[1].match(reg));
+					if (value.indexOf("am") != -1 || value.indexOf("AM") != -1 || value.indexOf("pm") != -1 || value.indexOf("PM") != -1) {
+						if (value.indexOf("am") != -1 || value.indexOf("AM") != -1) am = true;
+						else am = false;
+
+						if (!am) {
+							if (h < 13) {
+								h = h + 12;
+								if (h == 24) h = 0;
+							}
+						} else if (h == 12) h = 0;
+					} else if (h == 24) h = 0;
+					
+					return {'h':_td_num(h),'m':_td_num(m)};
+
+                }else{
+					return false;
+				}
+			}
             var _td_init = function(value) {
 
                 var
@@ -312,49 +352,36 @@
                     h,
                     m;
 
-                if (_td_input.val().length && !_td_options.setCurrentTime) {
+                if (st = _td_parseTime(_td_input.val())) {
 
-                    var reg = /\d+/g,
-                        am;
-                    var st = _td_input.val().split(':');
+                    h = st['h'];
+                    m = st['m'];
+					
 
-                    if (st) {
+                } else if (st = _td_parseTime(_td_options.value)) {
 
-                        h = st[0].match(reg);
-                        m = st[1].match(reg);
-                        if (_td_input.val().indexOf("am") != -1 || _td_input.val().indexOf("AM") != -1 || _td_input.val().indexOf("pm") != -1 || _td_input.val().indexOf("PM") != -1) {
-                            if (_td_input.val().indexOf("am") != -1 || _td_input.val().indexOf("AM") != -1) am = true;
-                            else am = false;
+                    h = st['h'];
+                    m = st['m'];
 
-                            if (!am) {
-                                if (h < 13) {
-                                    h = parseInt(h) + 12;
-                                    if (h == 24) h = 0;
-                                }
-                            } else if (h == 12) h = 0;
-                        } else if (h == 24) h = 0;
-                    } else {
+                } else if (_td_options.setCurrentTime) {
 
-                        if (!parseInt(_td_span_h.text())) h = _td_num(d.getHours());
-                        else h = _td_num(_td_span_h.text());
-                        if (!parseInt(_td_span_m.text())) m = _td_num(d.getMinutes());
-                        else m = _td_num(_td_span_m.text());
+                    h = _td_num(d.getHours());
+                    m = _td_num(d.getMinutes());
 
-                    }
-
-                } else {
-
-                    if (!parseInt(_td_span_h.text())) h = _td_num(d.getHours());
-                    else h = _td_num(_td_span_h.text());
-                    if (!parseInt(_td_span_m.text())) m = _td_num(d.getMinutes());
-                    else m = _td_num(_td_span_m.text());
-
-                }
+                }else{		
+					
+					h = '00';
+                    m = '00';
+					
+				}
 
                 _td_span_h.attr('data-id', h).text(h);
                 _td_span_m.attr('data-id', m).text(m);
-
-                _td_event_deg = Math.round((h * 360 / 23));
+				
+				_td_input.val(_td_toshowvalue(h, m));
+				_td_options.value = _td_input.val();
+                
+				_td_event_deg = Math.round((h * 360 / 23));
 
                 _td_c.find('.td-lancette div:first').css('transform', 'rotate(' + Math.round((m * 360 / 59)) + 'deg)');
 
@@ -371,10 +398,8 @@
                 e.preventDefault();
                 _td_input.blur();
             });
-
-            _td_input.click(function(e) {
-
-                clearInterval(_td_event);
+			_td_input.bind(_td_options.on, function(){
+				clearInterval(_td_event);
 
                 _td_container.removeClass('td-fadeout');
                 _td_container.addClass('td-show').addClass('td-' + _td_options.init_animation);
@@ -395,8 +420,10 @@
                     _td_c.removeClass('td-init');
 
                 }
-
-            });
+			
+			});
+			
+            
             _td_overlay.click(function() {
 
                 _td_container.addClass('td-fadeout').removeClass('td-' + _td_options.init_animation);
